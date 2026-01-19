@@ -4,25 +4,47 @@ import numpy as np
 import mediapipe as mp
 
 mp_pose = mp.solutions.pose
+mp_drawing = mp.solutions.drawing_utils
 
-def extract_keypoints_from_video(video_path, target_len=120):
-    """Extrahuje 33 klíčových bodů těla z videa (MediaPipe Pose)."""
+def extract_keypoints_from_video(video_path, target_len=300, visualize=False):
+    """Extrahuje 33 klíčových bodů těla z videa (MediaPipe Pose).
+       Pokud visualize=True, ukáže okno s vykreslenými body.
+    """
     cap = cv2.VideoCapture(video_path)
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
     seq = []
+    frame_count = 0
+    detected_frames = 0
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
+        frame_count += 1
+
         results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         if results.pose_landmarks:
+            detected_frames += 1
             pts = np.array([[lm.x, lm.y, lm.z] for lm in results.pose_landmarks.landmark]).flatten()
+            pts = pts - np.mean(pts)  # normalizace na pohyb
+            pts = pts / np.std(pts)
+
             seq.append(pts)
+
+            # 🟢 Pokud chceš vizuálně vidět detekci
+            if visualize:
+                mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+                cv2.imshow("Pose detection", frame)
+                if cv2.waitKey(1) & 0xFF == 27:  # ESC pro ukončení
+                    break
+
     cap.release()
+    cv2.destroyAllWindows()
+
+    print(f"🎥 {video_path}: {detected_frames}/{frame_count} framů s detekovanou pózou.")
 
     if len(seq) == 0:
-        print(f"[WARN] Ve videu {video_path} nebyly nalezeny body.")
+        print(f"⚠️  Žádné body detekovány ve videu: {video_path}")
         return np.zeros((target_len, 99))
 
     # Normalizace délky sekvence
