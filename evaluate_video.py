@@ -3,11 +3,11 @@ from tensorflow.keras.models import load_model
 from preprocess import extract_keypoints_from_video
 
 # Načtení modelu a názvů kategorií
-model = load_model("inhalation_classifier.keras")
+model = load_model("binary_classifier.keras")
 class_names = np.load("class_names.npy", allow_pickle=True)
 
 # Cesta k testovacímu videu
-video_path = "test/spravny.mp4"
+video_path = "test/test3.mp4"
 seq = extract_keypoints_from_video(video_path, target_len=300)
 seq = np.expand_dims(seq, axis=0)
 
